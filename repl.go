@@ -3,8 +3,8 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"net/http"
 	"os"
-	"strings"
 )
 
 
@@ -12,63 +12,25 @@ func runRepl() {
 
 
 	scanner := bufio.NewScanner(os.Stdin)
+	GlobalConfig := &Config{}
+	GlobalConfig.Client = http.Client{}
 	
-	for ; ; {
-		fmt.Print("Pokedex > ")
-		scanner.Scan()
-		
-		userInput := scanner.Text()
-		command := cleanInput(userInput)[0]
+	for {
+		userInput, command := promptUser("Pokedex > ", scanner)
 
 		if len(userInput) == 0 {
 			continue
 		}
 		
-		if command == "exit" {
-			commandExit()
-		} else if command == "help" {
-			commandHelp()
-		}
-		
-	}
-}
+		// Programmatically get all commands and their callbacks. If user command matches one of theirs, call it's function
+		commands:= getCommands(GlobalConfig)
 
-func cleanInput(text string) []string {
-	return strings.Fields(strings.ToLower(text))
-}
-
-func commandExit() error {
-	fmt.Print("Closing the Pokedex... Goodbye!\n")
+		if _, ok := commands[command]; ok {
+			callback := commands[command].Callback
 	
-	os.Exit(0)
-
-	return nil
-}
-
-func commandHelp() error {
-	commands := map[string]cliCommand {
-		"exit": {
-			name:		"exit",
-			description: "Exit the pokedex",
-			callback:	commandExit,
-		},
-		"help": {
-			name:		"help",
-			description:	"Displays a help message",
-			callback:	commandHelp,
-		},
+			callback(GlobalConfig)
+		} else {
+			fmt.Printf("I'm sorry, I don't know what %v means\n", command)
+		}
 	}
-
-	fmt.Print("Welcome to the Pokedex!\nUsage:\n\n")
-	for _, command := range commands {
-		fmt.Printf("%v: %v\n", command.name, command.description)	
-	}
-
-	return nil
-}
-
-type cliCommand struct {
-	name		string
-	description	string
-	callback	func() error
 }
