@@ -1,33 +1,35 @@
 package main
 
 import (
+	"PokedexCli/internal/pokecache"
 	"bufio"
 	"fmt"
 	"net/http"
 	"os"
+	"time"
 )
 
-
 func runRepl() {
-
 
 	scanner := bufio.NewScanner(os.Stdin)
 	GlobalConfig := &Config{}
 	GlobalConfig.Client = http.Client{}
-	
+	cache := pokecache.NewCache(5 * time.Second)
+	GlobalConfig.Cache = cache
+
 	for {
 		userInput, command := promptUser("Pokedex > ", scanner)
 
 		if len(userInput) == 0 {
 			continue
 		}
-		
+
 		// Programmatically get all commands and their callbacks. If user command matches one of theirs, call it's function
-		commands:= getCommands(GlobalConfig)
+		commands := getCommands(GlobalConfig)
 
 		if _, ok := commands[command]; ok {
 			callback := commands[command].Callback
-	
+
 			callback(GlobalConfig)
 		} else {
 			fmt.Printf("I'm sorry, I don't know what %v means\n", command)

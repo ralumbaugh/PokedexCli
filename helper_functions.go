@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -27,35 +26,30 @@ func addBorder() string {
 	return "------------------------------------"
 }
 
-func callApi(client http.Client, ioReader io.Reader, callType string, url string, outputData interface{}) (error){
+func callApi(client http.Client, ioReader io.Reader, callType string, url string) ([]byte, error) {
 	// Form api call
 	req, err := http.NewRequest(callType, url, ioReader)
 	if err != nil {
-		return fmt.Errorf("error creating api call: %w", err)
+		return []byte{}, fmt.Errorf("error creating api call: %w", err)
 	}
 
 	// Make api call
 	resp, err := client.Do(req)
 
 	if err != nil {
-		return fmt.Errorf("error performing api call: %w", err)
+		return []byte{}, fmt.Errorf("error performing api call: %w", err)
 	}
 
 	defer resp.Body.Close()
 
 	if resp.StatusCode < 200 || resp.StatusCode > 299 {
-		return fmt.Errorf("received non-ok status code: %v", resp.StatusCode)
+		return []byte{}, fmt.Errorf("received non-ok status code: %v", resp.StatusCode)
 	}
 
 	data, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return fmt.Errorf("error reading body: %w", err)
+		return []byte{}, fmt.Errorf("error reading body: %w", err)
 	}
 
-	err = json.Unmarshal(data, outputData)
-	if err != nil {
-		return fmt.Errorf("error unmarhsaling output data: %w", err)
-	}
-
-	return nil
+	return data, nil
 }
