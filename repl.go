@@ -18,9 +18,9 @@ func runRepl() {
 	GlobalConfig.Cache = cache
 
 	for {
-		userInput, command := promptUser("Pokedex > ", scanner)
+		command, fullCommands := promptUser("Pokedex > ", scanner)
 
-		if len(userInput) == 0 {
+		if len(command) == 0 {
 			continue
 		}
 
@@ -29,8 +29,14 @@ func runRepl() {
 
 		if _, ok := commands[command]; ok {
 			callback := commands[command].Callback
+			args := []string{}
 
-			callback(GlobalConfig)
+			if len(fullCommands) > 1 {
+				args = fullCommands[1:]
+			}
+
+			callback(GlobalConfig, args...)
+
 		} else {
 			fmt.Printf("I'm sorry, I don't know what %v means\n", command)
 		}

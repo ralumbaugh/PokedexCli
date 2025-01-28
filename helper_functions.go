@@ -8,13 +8,14 @@ import (
 	"strings"
 )
 
-func promptUser(prompt string, scanner *bufio.Scanner) (string, string) {
+func promptUser(prompt string, scanner *bufio.Scanner) (string, []string) {
 	fmt.Print(prompt)
 	scanner.Scan()
 	userInput := scanner.Text()
-	command := cleanInput(userInput)[0]
+	fullCommands := cleanInput(userInput)
+	command := fullCommands[0]
 
-	return userInput, command
+	return command, fullCommands
 }
 
 func cleanInput(text string) []string {

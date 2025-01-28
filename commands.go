@@ -6,13 +6,14 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"strings"
 )
 
 type CliCommand struct {
 	Name        string
 	Description string
 	Config      *Config
-	Callback    func(*Config) error
+	Callback    func(*Config, ...string) error
 }
 
 type Config struct {
@@ -28,19 +29,32 @@ type Location struct {
 	URL  string `json:"url"`
 }
 
+type encounterConfig struct {
+	Encounters []Encounter `json:"pokemon_encounters"`
+}
+
+type Encounter struct {
+	Pokemon Pokemon
+}
+
+type Pokemon struct {
+	Name string `json:"name"`
+	Url  string `json:"url"`
+}
+
 func getCommands(cfg *Config) map[string]CliCommand {
 	commands := map[string]CliCommand{
-		"exit": {
-			Name:        "exit",
-			Description: "Exit the pokedex",
-			Config:      cfg,
-			Callback:    commandExit,
-		},
 		"help": {
 			Name:        "help",
 			Description: "Displays a help message",
 			Config:      cfg,
 			Callback:    commandHelp,
+		},
+		"explore": {
+			Name:        "explore",
+			Description: "Displays the names of the pokemon available in a region. Example usage: explore <area-name>",
+			Config:      cfg,
+			Callback:    commandExplore,
 		},
 		"map": {
 			Name:        "map",
@@ -54,12 +68,18 @@ func getCommands(cfg *Config) map[string]CliCommand {
 			Config:      cfg,
 			Callback:    commandPrevMap,
 		},
+		"exit": {
+			Name:        "exit",
+			Description: "Exit the pokedex",
+			Config:      cfg,
+			Callback:    commandExit,
+		},
 	}
 
 	return commands
 }
 
-func commandExit(config *Config) error {
+func commandExit(config *Config, args ...string) error {
 	fmt.Print("Closing the Pokedex... Goodbye!\n")
 
 	config.Cache.Close()
@@ -68,10 +88,11 @@ func commandExit(config *Config) error {
 	return nil
 }
 
-func commandHelp(config *Config) error {
+func commandHelp(config *Config, args ...string) error {
 	commands := getCommands(config)
 
 	fmt.Printf("Welcome to the Pokedex!\n\nUsage:\n%v\n", addBorder())
+
 	for _, command := range commands {
 		fmt.Printf("%v: %v\n", command.Name, command.Description)
 	}
@@ -79,12 +100,12 @@ func commandHelp(config *Config) error {
 	return nil
 }
 
-func commandNextMap(cfg *Config) error {
+func commandNextMap(cfg *Config, args ...string) error {
 	err := getMap(cfg, getMapUrl(cfg.Next))
 	return err
 }
 
-func commandPrevMap(cfg *Config) error {
+func commandPrevMap(cfg *Config, args ...string) error {
 	if cfg.Previous == "" {
 		fmt.Print("You're on the first page\n")
 		return nil
@@ -93,6 +114,57 @@ func commandPrevMap(cfg *Config) error {
 		return err
 	}
 }
+
+func commandExplore(cfg *Config, args ...string) error {
+
+	if len(args) < 1 {
+		fmt.Print("Please enter a location to explore. Example: explore canalave-city\n")
+		return nil
+	}
+	location := args[0]
+
+	newLocation := &encounterConfig{}
+
+	cachedData, ok := cfg.Cache.Get(location)
+	if ok {
+		// Data is in cache. Let's goooooo!
+		// fmt.Printf("%v was found in cache. Loading from Cache.\n", location)
+		err := json.Unmarshal(cachedData, newLocation)
+
+		if err != nil {
+			return err
+		}
+	} else {
+		// fmt.Printf("%v was not found in cache. Calling api.\n", location)
+
+		data, err := callApi(cfg.Client, nil, "GET", "https://pokeapi.co/api/v2/location-area/"+location)
+
+		if err != nil {
+			if strings.Contains(err.Error(), "status code: 404") {
+				fmt.Printf("Could not find location %v. Find locations to explore using the map and mapb command!\n", location)
+			}
+			return err
+		}
+
+		cfg.Cache.Add(location, data)
+
+		err = json.Unmarshal(data, newLocation)
+
+		if err != nil {
+			return err
+		}
+	}
+
+	fmt.Printf("Exploring %v...\nFound Pokemon:\n", location)
+
+	for _, enc := range newLocation.Encounters {
+		fmt.Printf("- %v\n", enc.Pokemon.Name)
+	}
+
+	return nil
+}
+
+// Helper Functions below here
 
 func getMapUrl(url string) string {
 	if url == "" {
