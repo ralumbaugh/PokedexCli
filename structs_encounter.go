@@ -5,10 +5,10 @@ type encounterConfig struct {
 }
 
 type Encounter struct {
-	Pokemon Pokemon
+	Pokemon Pokemon_encounter
 }
 
-type Pokemon struct {
+type Pokemon_encounter struct {
 	Name string `json:"name"`
 	Url  string `json:"url"`
 }

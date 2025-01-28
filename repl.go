@@ -16,6 +16,8 @@ func runRepl() {
 	GlobalConfig.Client = http.Client{}
 	cache := pokecache.NewCache(5 * time.Second)
 	GlobalConfig.Cache = cache
+	GlobalConfig.Pokedex = map[string]Pokemon{}
+	GlobalConfig.PlayerXp = 0
 
 	for {
 		command, fullCommands := promptUser("Pokedex > ", scanner)

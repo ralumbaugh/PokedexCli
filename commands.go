@@ -15,6 +15,12 @@ func getCommands(cfg *Config) map[string]CliCommand {
 			Config:      cfg,
 			Callback:    commandHelp,
 		},
+		"catch": {
+			Name:        "catch",
+			Description: "Attempts to catch a pokemon. The higher experience it has, the harder it will be to catch. Example usage: catch <pokemon-name>",
+			Config:      cfg,
+			Callback:    commandCatch,
+		},
 		"explore": {
 			Name:        "explore",
 			Description: "Displays the names of the pokemon available in a region. Example usage: explore <area-name>",
