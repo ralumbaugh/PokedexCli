@@ -1,55 +1,58 @@
 package main
 
 import (
+	"PokedexCli/internal/pokecache"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 )
 
 type CliCommand struct {
-	Name		string
-	Description	string
-	Config		*Config
-	Callback	func(*Config) error
+	Name        string
+	Description string
+	Config      *Config
+	Callback    func(*Config) error
 }
 
 type Config struct {
-	Next		string `json:"next"`
-	Previous	string `json:"previous"`
-	Client		http.Client
-	Results		[]Location `json:"results"`
+	Next     string `json:"next"`
+	Previous string `json:"previous"`
+	Client   http.Client
+	Results  []Location `json:"results"`
+	Cache    *pokecache.Cache
 }
 
 type Location struct {
-	Name	string `json:"name"`
-	URL 	string `json:"url"`
+	Name string `json:"name"`
+	URL  string `json:"url"`
 }
 
 func getCommands(cfg *Config) map[string]CliCommand {
 	commands := map[string]CliCommand{
 		"exit": {
-			Name:        	"exit",
-			Description:	"Exit the pokedex",
-			Config:		 	cfg,
-			Callback:    	commandExit,
+			Name:        "exit",
+			Description: "Exit the pokedex",
+			Config:      cfg,
+			Callback:    commandExit,
 		},
 		"help": {
-			Name:       	"help",
-			Description:	"Displays a help message",
-			Config:			cfg,
-			Callback:   	commandHelp,
+			Name:        "help",
+			Description: "Displays a help message",
+			Config:      cfg,
+			Callback:    commandHelp,
 		},
 		"map": {
-			Name:			"map",
-			Description:	"Displays the names of the next 20 regions",
-			Config:			cfg,
-			Callback:		commandNextMap,
+			Name:        "map",
+			Description: "Displays the names of the next 20 regions",
+			Config:      cfg,
+			Callback:    commandNextMap,
 		},
 		"mapb": {
-			Name:			"mapb",
-			Description:	"Displays the names of the previous 20 regions",
-			Config:			cfg,
-			Callback:		commandPrevMap,
+			Name:        "mapb",
+			Description: "Displays the names of the previous 20 regions",
+			Config:      cfg,
+			Callback:    commandPrevMap,
 		},
 	}
 
@@ -58,7 +61,8 @@ func getCommands(cfg *Config) map[string]CliCommand {
 
 func commandExit(config *Config) error {
 	fmt.Print("Closing the Pokedex... Goodbye!\n")
-	
+
+	config.Cache.Close()
 	os.Exit(0)
 
 	return nil
@@ -69,7 +73,7 @@ func commandHelp(config *Config) error {
 
 	fmt.Printf("Welcome to the Pokedex!\n\nUsage:\n%v\n", addBorder())
 	for _, command := range commands {
-		fmt.Printf("%v: %v\n", command.Name, command.Description)	
+		fmt.Printf("%v: %v\n", command.Name, command.Description)
 	}
 
 	return nil
@@ -97,20 +101,45 @@ func getMapUrl(url string) string {
 	return url
 }
 
-func getMap(cfg *Config, url string) error {	
+func getMap(cfg *Config, url string) error {
 	newConfig := &Config{}
-	
-	err := callApi(cfg.Client, nil, "GET", url, newConfig)
-	if err != nil {
-		return err
+
+	// Check if it's in the cache first
+	if cachedData, ok := cfg.Cache.Get(url); ok {
+		fmt.Printf("\n%v\n%v already exists in our cache. Loading from cache.\n%v\n", addBorder(), url, addBorder())
+
+		err := json.Unmarshal(cachedData, newConfig)
+
+		if err != nil {
+			return err
+		}
+	} else {
+		fmt.Printf("\n%v\n%v doesn't exist in our cache yet. Making api call.\n%v\n", addBorder(), url, addBorder())
+		data, err := callApi(cfg.Client, nil, "GET", url)
+
+		if err != nil {
+			return err
+		}
+
+		cfg.Cache.Add(url, data)
+
+		// We want to add the first page to the cache whether we're getting there moving forward or backward. First time it loads, the url is https://pokeapi.co/api/v2/location-area. Second time it loads it is https://pokeapi.co/api/v2/location-area?offset=0&limit=20
+		if url == "https://pokeapi.co/api/v2/location-area" {
+			cfg.Cache.Add("https://pokeapi.co/api/v2/location-area?offset=0&limit=20", data)
+		}
+
+		err = json.Unmarshal(data, newConfig)
+		if err != nil {
+			return err
+		}
 	}
 
 	cfg.Next = newConfig.Next
 	cfg.Previous = newConfig.Previous
-	
+
 	fmt.Printf("Map locations:\n%v\n", addBorder())
 	for _, loc := range newConfig.Results {
-		fmt.Printf("%v\n",loc.Name)
+		fmt.Printf("%v\n", loc.Name)
 	}
 
 	return nil

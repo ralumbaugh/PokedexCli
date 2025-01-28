@@ -6,19 +6,19 @@ import (
 
 func TestCleanInput(t *testing.T) {
 	cases := []struct {
-		input		string
-		expected	[]string
+		input    string
+		expected []string
 	}{
 		{
-			input: "  hello world  ",
+			input:    "  hello world  ",
 			expected: []string{"hello", "world"},
 		},
 		{
-			input: "Charmander is cool",
+			input:    "Charmander is cool",
 			expected: []string{"charmander", "is", "cool"},
 		},
 		{
-			input: "It's a Jigglypuff as seen from above",
+			input:    "It's a Jigglypuff as seen from above",
 			expected: []string{"it's", "a", "jigglypuff", "as", "seen", "from", "above"},
 		},
 	}
@@ -56,6 +56,6 @@ func TestCleanInput(t *testing.T) {
 			passCount++
 		}
 	}
-	
-	t.Logf("\nSuccess: %v\nFailure: %v", passCount, failCount)	
+
+	t.Logf("\nSuccess: %v\nFailure: %v", passCount, failCount)
 }
