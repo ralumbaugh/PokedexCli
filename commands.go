@@ -39,6 +39,12 @@ func getCommands(cfg *Config) map[string]CliCommand {
 			Config:      cfg,
 			Callback:    commandPrevMap,
 		},
+		"inspect": {
+			Name:        "inspect",
+			Description: "Inspects the pokedex entry for a caught pokemon",
+			Config:      cfg,
+			Callback:    commandInspect,
+		},
 		"exit": {
 			Name:        "exit",
 			Description: "Exit the pokedex",
