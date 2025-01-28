@@ -10,10 +10,18 @@ type Pokemon struct {
 }
 
 type Type struct {
-	Name string `json:"name.name"`
+	Name TypeName `json:"type"`
+}
+
+type TypeName struct {
+	Name string `json:"name"`
 }
 
 type Stat struct {
-	Name string `json:"stat.name"`
-	Val  int    `json:"base_stat"`
+	Name StatName `json:"stat"`
+	Val  int      `json:"base_stat"`
+}
+
+type StatName struct {
+	Name string `json:"name"`
 }
